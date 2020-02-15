@@ -28,6 +28,7 @@ summary(activity)
 
 Converting the date from class factor to class dates
 ```{r preprocess}
+library("lubridate")
 activity$date <- ymd(activity$date)
 ```
 
