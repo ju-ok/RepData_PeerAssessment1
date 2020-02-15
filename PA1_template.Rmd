@@ -7,19 +7,119 @@ output:
 
 
 ## Loading and preprocessing the data
+Loading the requied packages
+```{r, message = FALSE}
+library("Hmisc", "lubridate")
+```
 
+unzipping and loading the data
+```{r unzip activity.zip}
+unzip("activity.zip")
+activity <- read.csv("activity.csv")
+```
 
+viewing basic information about the dataset
+```{r Explore}
+str(activity)
+head(activity, 5)
+tail(activity, 5)
+summary(activity)
+```
+
+Converting the date from class factor to class dates
+```{r preprocess}
+activity$date <- ymd(activity$date)
+```
 
 ## What is mean total number of steps taken per day?
+Calculating the total number of steps taken per day (ignoring missing values)
+```{r Sum of steps per day}
+steps_per_day <- aggregate(steps ~ date, activity, sum)
+```
 
+Plotting a Histogram of the total number of steps taken per day
+```{r Hist}
+ggplot(data = steps_per_day, mapping = aes(x = steps)) + 
+        geom_histogram(fill = "limegreen", bins = 20) +
+        labs(title = "Total number of steps taken each day", x = "steps per day", y = "Frequency")
+```
 
+Mean and median of the total number of steps taken per day
+```{r mean and median}
+mean(steps_per_day$steps, na.rm = TRUE)
+median(steps_per_day$steps, na.rm = TRUE)
+```
 
 ## What is the average daily activity pattern?
+A time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+```{r timeseries1}
+average_interval <- aggregate(steps ~ interval, activity, mean)
+ggplot(data = average_interval, aes(x = interval, y = steps)) + 
+        geom_line(color = "limegreen") +
+        labs(title = "Average number of steps taken by 5-minute interval", 
+             x = "time interval(mins)", y= "Average number of steps")
+```
 
-
+5-5-minute interval, on average across all the days in the dataset, containing the maximum number of steps
+```{r maximum interval}
+average_interval[which.max(average_interval$steps), 1]
+```
 
 ## Imputing missing values
+The total number of missing values in the dataset (i.e. the total number of rows with NAs)
+```{r Number of NAs}
+sum(is.na(activity$steps))
+```
 
+Filling in all of the missing values in the dataset
+```{r Impute}
+steps_imputed <- with(activity, impute(steps, mean))
+```
 
+Creating a new dataset that is equal to the original dataset but with the missing data filled in
+```{r data with imputed steps}
+activity2 <- cbind(steps_imputed, activity)
+activity2 <- activity2[ , -2]
+head(activity2, 10)
+```
+
+Plotting Histogram of the total number of steps taken each day 
+```{r Hist_imputed}
+daily_steps <- aggregate(steps_imputed ~ date, activity2, sum)
+
+ggplot(data = daily_steps, mapping = aes(x = steps_imputed)) + 
+        geom_histogram(fill = "limegreen", bins = 20) +
+        labs(title = "Total number of steps taken each day", x = "steps per day", y = "Frequency")
+```
+
+Mean and median total number of steps taken per day
+```{r Mean and median of imputed data}
+Mean_steps <- mean(daily_steps$steps_imputed)
+Median_steps <- median(daily_steps$steps_imputed)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+Creating a variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day
+```{r weekdays and weekends}
+day_type <- function(day){
+        if(wday(day) %in% c(1,7))
+                name <-"weekend"
+        else
+                name <-"weekday"
+        name
+}
+activity2$day <- sapply(activity2$date, day_type)
+head(activity2, 5)
+```
+
+A plot containing a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis)
+```{r, timeseries2}
+average_interval2 <- aggregate(steps_imputed ~ interval + day, activity2, mean)
+
+ggplot(data = average_interval2, aes(x = interval, y = steps_imputed)) + 
+        geom_line(color = "limegreen") + 
+        facet_wrap(day ~ .) +
+        labs(title = "Average number of steps taken by time interval on weekdays and weekends",
+            x = "time interval(mins)", y = "Average steps" )
+```
+
